@@ -38,6 +38,14 @@ sudo apt-get install libprotoc-dev
 
 ## How to run it
 
+Set the environment variable in the `.env` file
+
+```bash
+CERTIFICATES_PATH= #absolute path of certificate folder
+ENVOY_CONFIG= #absolute path of .yaml file
+ENVOY_DEV_CONFIG= #absolute path of dev .yaml file
+```
+
 ### Server
 To run Haaukins in local
 ```bash

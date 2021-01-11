@@ -46,9 +46,9 @@ static_resources:
               alpn_protocols: "h2"
               tls_certificates:
                 - certificate_chain:
-                    filename: "/etc/certs/domain.cert.pem"
+                    filename: "/etc/certs/fullchain.pem"
                   private_key:
-                    filename: "/etc/certs/private.key.pem"
+                    filename: "/etc/certs/privkey.pem"
   clusters:
     - name: gRPC_endpoint
       connect_timeout: 0.25s

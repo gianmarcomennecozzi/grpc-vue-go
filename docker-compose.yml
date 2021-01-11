@@ -1,18 +1,21 @@
 version: '3.4'
 services:
   proxy:
-    image: aaunetworksecurity/haaukins-webclient:envoy
+    image: envoyproxy/envoy:v1.16.0
+    container_name: webclient_envoy
     ports:
       - '8000:8000'
     volumes:
       - ${CERTIFICATES_PATH}:/etc/certs
+      - ${ENVOY_CONFIG}:/etc/envoy/envoy.yaml # absolute path to yaml file in ENVOY_CONFIG
     networks:
       - haaukins-webclient
     env_file:
       - .env
 
   webclient:
-    image: aaunetworksecurity/haaukins-webclient:webclient
+    image: aaunetworksecurity/haaukins-webclient:v1.4.0
+    container_name: webclient
     ports:
       - '8003:8003'
     volumes:

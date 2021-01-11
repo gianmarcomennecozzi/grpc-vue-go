@@ -143,73 +143,19 @@
               </b-col>
               <b-col md="12" class="mt-3 mt-lg-0" style="z-index: 2">
                 <b-form-group>
-                  <div class="challenges-field-modal frontends-field-modal p-3 mt-2" :class="{ 'my-is-invalid': submitted && this.selectedChallenges.length == 0 }">
-                    <div class="row">
-                      <div class="col-3">
-                        <div class="nav flex-column nav-pills sticky-top" id="challengesCategory" role="tablist" aria-orientation="vertical">
-                          <a class="nav-link active show" id="web-exploit-tab" data-toggle="pill" href="#web-exploit" role="tab" aria-controls="web-exploit" aria-selected="true">Web_Exploit.</a>
-                          <a class="nav-link" id="forensics-tab" data-toggle="pill" href="#forensics" role="tab" aria-controls="forensics" aria-selected="false">Forensics</a>
-                          <a class="nav-link" id="binary-tab" data-toggle="pill" href="#binary" role="tab" aria-controls="binary" aria-selected="false">Binary</a>
-                          <a class="nav-link" id="reverse-eng-tab" data-toggle="pill" href="#reverse-eng" role="tab" aria-controls="reverse-eng" aria-selected="false">Reverse_Eng.</a>
-                          <a class="nav-link" id="cryptography-tab" data-toggle="pill" href="#cryptography" role="tab" aria-controls="cryptography" aria-selected="false">Cryptography</a>
-                        </div>
-                      </div>
-                      <div class="col-9">
-                        <div class="tab-content" id="v-pills-tabContent">
-                          <div class="tab-pane fade active show" id="web-exploit" role="tabpanel" aria-labelledby="web-exploit-tab">
-                            <b-form-checkbox-group
-                                id="challengesWE"
-                                v-model="selectedChallenges"
-                                :options="challengesTextWE"
-                                name="challengesWE"
-                                class="ml-4"
-                                stacked
-                            ></b-form-checkbox-group>
-                          </div>
-                          <div class="tab-pane fade" id="forensics" role="tabpanel" aria-labelledby="forensics-tab">
-                            <b-form-checkbox-group
-                                id="challengesF"
-                                v-model="selectedChallenges"
-                                :options="challengesTextF"
-                                name="challengesF"
-                                class="ml-4"
-                                stacked
-                            ></b-form-checkbox-group>
-                          </div>
-                          <div class="tab-pane fade" id="binary" role="tabpanel" aria-labelledby="binary-tab">
-                            <b-form-checkbox-group
-                                id="challengesB"
-                                v-model="selectedChallenges"
-                                :options="challengesTextB"
-                                name="challengesB"
-                                class="ml-4"
-                                stacked
-                            ></b-form-checkbox-group>
-                          </div>
-                          <div class="tab-pane fade" id="reverse-eng" role="tabpanel" aria-labelledby="reverse-eng-tab">
-                            <b-form-checkbox-group
-                                id="challengesRE"
-                                v-model="selectedChallenges"
-                                :options="challengesTextRE"
-                                name="challengesRE"
-                                class="ml-4"
-                                stacked
-                            ></b-form-checkbox-group>
-                          </div>
-                          <div class="tab-pane fade" id="cryptography" role="tabpanel" aria-labelledby="cryptography-tab">
-                            <b-form-checkbox-group
-                                id="challengesC"
-                                v-model="selectedChallenges"
-                                :options="challengesTextC"
-                                name="challengesC"
-                                class="ml-4"
-                                stacked
-                            ></b-form-checkbox-group>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  <b-card no-body class="challenges-field-modal" :class="{ 'my-is-invalid': submitted && this.selectedChallenges.length == 0 }">
+                    <b-tabs pills card vertical>
+                      <b-tab v-for="c in categories" v-bind:key="c.tag" v-bind:title="c.name">
+                        <b-card-text>
+                          <b-form-group>
+                            <b-form-checkbox-group v-bind:id="c.tag" v-model="selectedChallenges" stacked>
+                              <b-form-checkbox v-for="e in challenges[c.tag]" v-bind:key="e.tag" v-bind:value="e.tag" class="ch_chbox">{{getChallengeName(e)}}</b-form-checkbox>
+                            </b-form-checkbox-group>
+                          </b-form-group>
+                        </b-card-text>
+                      </b-tab>
+                    </b-tabs>
+                  </b-card>
                   <template v-slot:label>
                     <b>Choose your Challenges:</b>
                     <b-form-checkbox
@@ -237,6 +183,7 @@
     import { Empty, CreateEventRequest } from "daemon_pb";
     import { daemonclient } from "../App";
     import Datepicker from "vuejs-datepicker"
+    import {ExerciseClient, token} from "@/App";
 
     export default {
         name: "EventModal",
@@ -253,16 +200,13 @@
                 eventAvailability: 0,
                 eventCapacity: 0,
                 eventFinishTime: '', eventStartTime: Date.now(),
+                challenges: [],
+                categories: [],
                 selectedChallenges: [],
                 selectAllChallenges: false,
                 frontends: [],
                 selectedFrontends: null,
-                challengesWE: [], challengesTextWE: [],
-                challengesB: [], challengesTextB: [],
-                challengesF: [], challengesTextF: [],
-                challengesRE: [], challengesTextRE: [],
-                challengesC: [], challengesTextC: [],
-                cat: '', childrenChallenges: '', isDisabled: false,
+                isDisabled: false,
                 disabledDates: {
                     to: new Date(Date.now() - 8640000)
                 },
@@ -270,7 +214,7 @@
             }
         },
         mounted: function(){
-            this.getChallenges();
+            this.getCategories();
             this.getFrontends();
             this.handleButtons();
         },
@@ -291,11 +235,17 @@
                 }
             },
             toggleAllChallenges: function(checked) {
-                this.selectedChallenges = checked ? this.challengesWE
-                    .concat(this.challengesB)
-                    .concat(this.challengesF)
-                    .concat(this.challengesRE)
-                    .concat(this.challengesC): []
+              let chbox = document.getElementsByClassName("ch_chbox")
+              for(let ii = 0; ii < chbox.length; ii++) {
+
+                if(chbox[ii].children[0].type == "checkbox") {
+                  if (checked) {
+                    chbox[ii].children[0].checked = true;
+                  }else {
+                    chbox[ii].children[0].checked = false;
+                  }
+                }
+              }
             },
             encodeHTML: function(s) {
                 return s.replace(/&/g, '&amp;')
@@ -350,56 +300,48 @@
                 this.$emit('createEvent', getRequest)
 
             },
-            getChallenges: function () {
+            getCategories: function () {
                 let getRequest = new Empty();
-                const that = this
-                daemonclient.listExercises(getRequest, {Token: localStorage.getItem("user")}, (err, response) => {
-                    this.error = err;
-                    let exercisesListObj = response.getExercisesList();
-                    exercisesListObj.forEach(function (element) {
-                        let childrenChallengesObj = element.getExerciseinfoList();
-                        that.childrenChallenges = "   (";
+                let that = this
+                ExerciseClient.getCategories(getRequest, {Token: token}, (err, response) => {
+                    if (err != null) {
+                        this.error = err
+                    }else{
+                        let r = response.toObject().categoriesList
+                        r.forEach(categ => {
+                            this.$set(that.challenges, categ.tag, [])
+                            that.categories.push(categ)
+                        })
+                        this.getChallenges()
+                    }
+                })
+            },
+            getChallenges: function () {
+              let getRequest = new Empty();
+              ExerciseClient.getExercises(getRequest, {Token: token}, (err, response) => {
+                if (err != null) {
+                  this.error = err
+                }else{
+                  let that = this;
+                  response.toObject().exercisesList.forEach(ex => {
+                    that.challenges[ex.category].push(ex)
+                  })
+                }
+              })
+            },
+            getChallengeName: function (c) {
+                let full_ch_name = c.name
+                let ch_count = 0
+                full_ch_name += " (";
+                c.instanceList.forEach(i => i.childrenList.forEach(c => full_ch_name+= c.name + ", ", ch_count++))
 
-                        for (let i = 0; i < childrenChallengesObj.length; i++){
-                            that.cat = childrenChallengesObj[i].getCategory();
-                            that.childrenChallenges+= childrenChallengesObj[i].getName() + ", "
-                        }
-                        that.childrenChallenges = that.childrenChallenges.substring(0, that.childrenChallenges.length - 2)
-                        that.childrenChallenges+= ")";
-                        if (childrenChallengesObj.length == 1){
-                            that.childrenChallenges = '';
-                        }
+                if (ch_count > 1) {
+                  full_ch_name = full_ch_name.substring(0, full_ch_name.length - 2)
+                  full_ch_name+= ")";
+                  return full_ch_name
+                }
 
-
-                        let taglist = element.getTagsList();
-                        let name = element.getName();
-                        let parentChallenge = { text: name + that.childrenChallenges, value: taglist[0] };
-                        switch (that.cat) {
-                            case "Web exploitation":
-                                that.challengesTextWE.push(parentChallenge);
-                                that.challengesWE.push(taglist[0]);
-                                break;
-                            case "Forensics":
-                                that.challengesTextF.push(parentChallenge);
-                                that.challengesF.push(taglist[0]);
-                                break;
-                            case "Binary":
-                                that.challengesTextB.push(parentChallenge);
-                                that.challengesB.push(taglist[0]);
-                                break;
-                            case "Cryptography":
-                                that.challengesTextC.push(parentChallenge);
-                                that.challengesC.push(taglist[0]);
-                                break;
-                            case "Reverse Engineering":
-                                that.challengesTextRE.push(parentChallenge);
-                                that.challengesRE.push(taglist[0]);
-                                break;
-                        }
-
-                    })
-                });
-
+                return c.name
             },
             getFrontends: function () {
                 let getRequest = new Empty();
@@ -422,10 +364,12 @@
     }
 </script>
 
-<style scoped>
+<style>
     .carousel-height{
       height: 650px;
       width: 100%;
+      overflow-y: auto;
+      overflow-x: hidden;
     }
     .selection-phase-div:hover{
       background-color: #211a52!important;
@@ -459,12 +403,15 @@
         display: flex;
         align-items: center;
     }
-    .nav-link {
+    .challenges-field-modal .nav-link {
         color: #211a52!important;
     }
-    .nav-link.active{
+    .challenges-field-modal .nav-link.active{
         color: #fff!important;
         background-color: #211a52!important;
         border-color: #211a52!important;
+    }
+    .tabs{
+      height: 100%;
     }
 </style>
